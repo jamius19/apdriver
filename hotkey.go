@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 
 	"github.com/go-vgo/robotgo"
 )
+
+const PS_PATH = "C:\\Program Files\\Adobe\\Adobe Photoshop 2025\\Photoshop.exe"
 
 func HandleSend(ctx context.Context, wg *sync.WaitGroup, pot chan PotSignal) {
 	defer wg.Done()
@@ -18,11 +21,13 @@ func HandleSend(ctx context.Context, wg *sync.WaitGroup, pot chan PotSignal) {
 			return
 		case s := <-ForegroundChanged:
 			if strings.EqualFold(s, PS_PATH) {
+				fmt.Println("Photoshop is foreground")
 				isPs = true
 			} else {
 				isPs = false
 			}
 		case val := <-pot:
+			fmt.Printf("value: %d\n", val.value)
 			mode := rune(val.mode)
 			value := val.value
 

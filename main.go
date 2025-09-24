@@ -2,25 +2,32 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+
+	"github.com/getlantern/systray"
 )
+
+//go:embed assets/artistpad_icon.ico
+var artistpadIcon []byte
 
 type PotSignal struct {
 	mode  byte
 	value int
 }
 
-const PS_PATH = "C:\\Program Files\\Adobe\\Adobe Photoshop 2025\\Photoshop.exe"
+var stop = make(chan os.Signal, 1)
 
 func main() {
+	go systray.Run(onReady, onExit)
+
 	wg := &sync.WaitGroup{}
 	pot := make(chan PotSignal, 3)
 
-	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGINT)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -38,4 +45,21 @@ func main() {
 	fmt.Println("Received interrupt signal, shutting down...")
 	cancel()
 	wg.Wait()
+}
+
+func onReady() {
+	systray.SetIcon(artistpadIcon)
+	systray.SetTitle("Artistpad Driver")
+	systray.SetTooltip("Artistpad Driver")
+
+	mquit := systray.AddMenuItem("Quit", "Quit the driver")
+
+	go func() {
+		<-mquit.ClickedCh
+		systray.Quit()
+	}()
+}
+
+func onExit() {
+	stop <- os.Interrupt
 }
