@@ -1,0 +1,20 @@
+# Compiled binaries
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Build artifacts
+/bin/
+/pkg/
+
+# Dependency vendor directory (if not versioning)
+/vendor/
+
+# Editor/IDE specific files
+.vscode/
+.idea/
+
+# Log and temporary files
+*.log
+*.tmp
