@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gen2brain/beeep"
 	"go.bug.st/serial"
 	"go.bug.st/serial/enumerator"
 )
@@ -15,6 +16,7 @@ import (
 func HandleDeviceInput(ctx context.Context, wg *sync.WaitGroup, pot chan<- PotSignal) {
 	defer wg.Done()
 
+DeviceLoop:
 	for {
 		select {
 		case <-ctx.Done():
@@ -57,16 +59,21 @@ func HandleDeviceInput(ctx context.Context, wg *sync.WaitGroup, pot chan<- PotSi
 		port, err := serial.Open(portName, mode)
 		if err != nil {
 			fmt.Errorf("Failed to open serial port:", err)
-			continue
+			_ = beeep.Alert("Device Info", "Failed to connect. Restarting device.", ArtistpadIcon)
+
+			continue DeviceLoop
 		}
 
-		defer port.Close()
+		_ = beeep.Alert("Device Info", "Artistpad is connected", ArtistpadIcon)
 
 		err1 := port.SetDTR(false)
 		err2 := port.SetRTS(false)
 		if err1 != nil || err2 != nil {
 			fmt.Errorf("Warning: Failed to set reset signals: DTR=%v, RTS=%v\n", err1, err2)
-			continue
+			_ = beeep.Alert("Device Info", "Failed to connect to Artistpad. Restarting device.", ArtistpadIcon)
+
+			_ = port.Close()
+			continue DeviceLoop
 		}
 		time.Sleep(100 * time.Millisecond) // Hold reset for 100ms
 
@@ -74,7 +81,10 @@ func HandleDeviceInput(ctx context.Context, wg *sync.WaitGroup, pot chan<- PotSi
 		err2 = port.SetRTS(true)
 		if err1 != nil || err2 != nil {
 			fmt.Errorf("Warning: Failed to release reset signals: DTR=%v, RTS=%v\n", err1, err2)
-			continue
+			_ = beeep.Alert("Device Info", "Failed to connect to Artistpad. Restarting device.", ArtistpadIcon)
+
+			_ = port.Close()
+			continue DeviceLoop
 		}
 
 		time.Sleep(2 * time.Second) // Increased wait time after reset
@@ -92,31 +102,54 @@ func HandleDeviceInput(ctx context.Context, wg *sync.WaitGroup, pot chan<- PotSi
 		_, err = port.Write([]byte{101})
 		if err != nil {
 			fmt.Errorf("Error initiating handshake: %v\n", err)
-			continue
+			_ = beeep.Alert("Device Info", "Failed to connect to Artistpad. Restarting device.", ArtistpadIcon)
+
+			_ = port.Close()
+			continue DeviceLoop
 		}
 
 		// Reset timeout for normal operation
 		err = port.SetReadTimeout(50 * time.Millisecond)
 		if err != nil {
 			fmt.Errorf("Warning: Failed to set read timeout: %v\n", err)
-			continue
+			_ = beeep.Alert("Device Info", "Failed to connect to Artistpad. Restarting device.", ArtistpadIcon)
+
+			_ = port.Close()
+			continue DeviceLoop
 		}
 
 		// 5) Create a scanner to read line by line
 		scanner := bufio.NewScanner(port)
+		errorCount := 0
+
 		for scanner.Scan() {
 			select {
 			case <-ctx.Done():
+				_ = port.Close()
 				return
 			default:
 			}
 
 			line := scanner.Text()
 			mode := line[0]
+			if mode == 'x' {
+				pot <- PotSignal{mode, -100}
+				continue
+			}
+
 			valueStr := line[1:]
 			value, err := strconv.Atoi(valueStr)
 			if err != nil {
 				fmt.Errorf("Invalid pot value: %s\n", valueStr)
+				errorCount++
+				if errorCount >= 5 {
+					fmt.Println("Too many errors, restarting device read...")
+					_ = beeep.Alert("Device Info", "Artistpad connection error. Restarting device.", ArtistpadIcon)
+
+					_ = port.Close()
+					continue DeviceLoop
+				}
+
 				continue
 			}
 
@@ -125,7 +158,10 @@ func HandleDeviceInput(ctx context.Context, wg *sync.WaitGroup, pot chan<- PotSi
 
 		if err := scanner.Err(); err != nil {
 			fmt.Errorf("Scanner error: %v\n", err)
-			continue
+			_ = beeep.Alert("Device Info", "Artistpad connection error. Restarting device.", ArtistpadIcon)
+
+			_ = port.Close()
+			continue DeviceLoop
 		}
 	}
 }

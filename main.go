@@ -9,11 +9,12 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/gen2brain/beeep"
 	"github.com/getlantern/systray"
 )
 
 //go:embed assets/artistpad_icon.ico
-var artistpadIcon []byte
+var ArtistpadIcon []byte
 
 type PotSignal struct {
 	mode  byte
@@ -24,6 +25,7 @@ var stop = make(chan os.Signal, 1)
 
 func main() {
 	go systray.Run(onReady, onExit)
+	beeep.AppName = "Artistpad Driver"
 
 	wg := &sync.WaitGroup{}
 	pot := make(chan PotSignal, 3)
@@ -48,7 +50,7 @@ func main() {
 }
 
 func onReady() {
-	systray.SetIcon(artistpadIcon)
+	systray.SetIcon(ArtistpadIcon)
 	systray.SetTitle("Artistpad Driver")
 	systray.SetTooltip("Artistpad Driver")
 
