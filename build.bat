@@ -1,1 +1,1 @@
-go build -ldflags -H=windowsgui .
+go build -ldflags -H=windowsgui  -o .\build\apdriver.exe .
