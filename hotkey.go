@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -11,21 +12,38 @@ import (
 
 const SLEEP_TIME_MS = 5
 
-const PS_PATH = "C:\\Program Files\\Adobe\\Adobe Photoshop 2025\\Photoshop.exe"
+const PS_PATH = "Photoshop.exe"
+const REBELLE7_PATH = "Rebelle 7.exe"
+const REBELLE8_PATH = "Rebelle 8.exe"
+const KRITA_PATH = "krita.exe"
 
 func HandleSend(ctx context.Context, wg *sync.WaitGroup, pot chan PotSignal) {
 	defer wg.Done()
 	isPs := false
+	isRebelle := false
+	isKrita := false
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case s := <-ForegroundChanged:
-			if strings.EqualFold(s, PS_PATH) {
+			if strings.EqualFold(filepath.Base(s), PS_PATH) {
 				isPs = true
+				isRebelle = false
+				isKrita = false
+			} else if strings.EqualFold(filepath.Base(s), REBELLE7_PATH) || strings.EqualFold(filepath.Base(s), REBELLE8_PATH) {
+				isPs = false
+				isRebelle = true
+				isKrita = false
+			} else if strings.EqualFold(filepath.Base(s), KRITA_PATH) {
+				isPs = false
+				isRebelle = false
+				isKrita = true
 			} else {
 				isPs = false
+				isRebelle = false
+				isKrita = false
 			}
 		case val := <-pot:
 			mode := rune(val.mode)
@@ -34,15 +52,14 @@ func HandleSend(ctx context.Context, wg *sync.WaitGroup, pot chan PotSignal) {
 			if value == 0 {
 				continue
 			}
+			absValue := ix.Abs(value)
+			direction := "right"
+			if value < 0 {
+				direction = "left"
+			}
 
 			if isPs {
 				if mode != 'x' {
-					absValue := ix.Abs(value)
-					direction := "right"
-					if value < 0 {
-						direction = "left"
-					}
-
 					if absValue > 25 {
 						for i := 0; i < 12; i++ {
 							robotgo.KeyTap(direction, "shift")
@@ -83,8 +100,42 @@ func HandleSend(ctx context.Context, wg *sync.WaitGroup, pot chan PotSignal) {
 				//		}
 				//	}
 				//}
+			} else if isRebelle {
+				if absValue > 16 {
+					for i := 0; i < 13; i++ {
+						robotgo.KeyTap(direction)
+						robotgo.MilliSleep(SLEEP_TIME_MS)
+					}
+				} else if absValue > 9 {
+					for i := 0; i < 6; i++ {
+						robotgo.KeyTap(direction)
+						robotgo.MilliSleep(SLEEP_TIME_MS)
+					}
+				} else if absValue > 0 {
+					for i := 0; i < 2; i++ {
+						robotgo.KeyTap(direction)
+						robotgo.MilliSleep(SLEEP_TIME_MS)
+					}
+				}
+			} else if isKrita {
+				if absValue > 16 {
+					for i := 0; i < 9; i++ {
+						robotgo.KeyTap(direction)
+						robotgo.MilliSleep(SLEEP_TIME_MS)
+					}
+				} else if absValue > 9 {
+					for i := 0; i < 6; i++ {
+						robotgo.KeyTap(direction)
+						robotgo.MilliSleep(SLEEP_TIME_MS)
+					}
+				} else if absValue > 0 {
+					for i := 0; i < 2; i++ {
+						robotgo.KeyTap(direction)
+						robotgo.MilliSleep(SLEEP_TIME_MS)
+					}
+				}
 			} else {
-				// not ps, ignoring
+
 			}
 		}
 	}
