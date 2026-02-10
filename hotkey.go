@@ -135,7 +135,25 @@ func HandleSend(ctx context.Context, wg *sync.WaitGroup, pot chan PotSignal) {
 					}
 				}
 			} else {
+				direction := "audio_vol_up"
+				if value < 0 {
+					direction = "audio_vol_down"
+				}
 
+				if absValue > 12 {
+					for i := 0; i < 5; i++ {
+						robotgo.KeyTap(direction)
+						robotgo.MilliSleep(SLEEP_TIME_MS)
+					}
+				} else if absValue > 6 {
+					for i := 0; i < 3; i++ {
+						robotgo.KeyTap(direction)
+						robotgo.MilliSleep(SLEEP_TIME_MS)
+					}
+				} else if absValue > 0 {
+					robotgo.KeyTap(direction)
+					robotgo.MilliSleep(SLEEP_TIME_MS)
+				}
 			}
 		}
 	}
