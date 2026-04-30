@@ -16,12 +16,14 @@ const PS_PATH = "Photoshop.exe"
 const REBELLE7_PATH = "Rebelle 7.exe"
 const REBELLE8_PATH = "Rebelle 8.exe"
 const KRITA_PATH = "krita.exe"
+const ASEPRITE_PATH = "Aseprite.exe"
 
 func HandleSend(ctx context.Context, wg *sync.WaitGroup, pot chan PotSignal) {
 	defer wg.Done()
 	isPs := false
 	isRebelle := false
 	isKrita := false
+	isAseprite := false
 
 	for {
 		select {
@@ -32,18 +34,27 @@ func HandleSend(ctx context.Context, wg *sync.WaitGroup, pot chan PotSignal) {
 				isPs = true
 				isRebelle = false
 				isKrita = false
+				isAseprite = false
 			} else if strings.EqualFold(filepath.Base(s), REBELLE7_PATH) || strings.EqualFold(filepath.Base(s), REBELLE8_PATH) {
 				isPs = false
 				isRebelle = true
 				isKrita = false
+				isAseprite = false
 			} else if strings.EqualFold(filepath.Base(s), KRITA_PATH) {
 				isPs = false
 				isRebelle = false
 				isKrita = true
+				isAseprite = false
+			} else if strings.EqualFold(filepath.Base(s), ASEPRITE_PATH) {
+				isPs = false
+				isRebelle = false
+				isKrita = false
+				isAseprite = true
 			} else {
 				isPs = false
 				isRebelle = false
 				isKrita = false
+				isAseprite = false
 			}
 		case val := <-pot:
 			mode := rune(val.mode)
@@ -133,6 +144,20 @@ func HandleSend(ctx context.Context, wg *sync.WaitGroup, pot chan PotSignal) {
 						robotgo.KeyTap(direction)
 						robotgo.MilliSleep(SLEEP_TIME_MS)
 					}
+				}
+			} else if isAseprite {
+				if mode == 'x' {
+					// flip brush horizontally on press
+					robotgo.KeyTap("h", "alt", "shift")
+				} else {
+					direction := "w"
+
+					if value < 0 {
+						direction = "q"
+					}
+
+					robotgo.KeyTap(direction, "ctrl", "shift")
+					robotgo.MilliSleep(SLEEP_TIME_MS)
 				}
 			} else {
 				direction := "audio_vol_up"
